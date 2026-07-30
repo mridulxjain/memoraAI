@@ -1,98 +1,141 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Colors, Layout, Typography } from '@/constants/Theme';
+import { ActionButton } from '@/components/ActionButton';
+import { StorageCard } from '@/components/StorageCard';
+import { RecommendationCard } from '@/components/RecommendationCard';
+import { SectionHeader } from '@/components/SectionHeader';
+import { Feather } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useStorageStats } from '@/hooks/useStorageStats';
+import { FileScannerService } from '@/services/FileScannerService';
+import { AIService, AIAnalysisResult } from '@/services/AIService';
+import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { stats, refreshStats } = useStorageStats();
+  const router = useRouter();
+  const [aiAnalysis, setAiAnalysis] = React.useState<AIAnalysisResult | null>(null);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useFocusEffect(
+    React.useCallback(() => {
+      AIService.getCachedAnalysis().then(setAiAnalysis);
+    }, [])
+  );
+
+  const handleScanFiles = async () => {
+    const count = await FileScannerService.scanFiles();
+    if (count > 0) {
+      refreshStats();
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Greeting Section */}
+        <Animated.View entering={FadeInDown.duration(600)} style={styles.header}>
+          <Text style={styles.greeting}>Good Evening</Text>
+          <Text style={styles.title}>MemoraAI</Text>
+          <Text style={styles.subtitle}>Your AI understands your digital life.</Text>
+        </Animated.View>
+
+        {/* Storage Ring Component */}
+        <StorageCard used={stats.usedBytes / (1024 * 1024 * 1024)} total={stats.totalBytes / (1024 * 1024 * 1024)} />
+
+        {/* Quick Actions */}
+        <SectionHeader title="Quick Actions" />
+        <View style={styles.actionsGrid}>
+          <ActionButton 
+            title="Scan Files" 
+            icon={<Feather name="search" size={20} color="#FFF" />} 
+            onPress={handleScanFiles} 
+            style={styles.actionBtn}
+          />
+          <ActionButton 
+            title="Analyze" 
+            variant="secondary"
+            icon={<Feather name="bar-chart-2" size={20} color={Colors.text} />} 
+            onPress={() => {}} 
+            style={styles.actionBtn}
+          />
+          <ActionButton 
+            title="Cleanup" 
+            variant="secondary"
+            icon={<Feather name="trash-2" size={20} color={Colors.text} />} 
+            onPress={() => {}} 
+            style={styles.actionBtn}
+          />
+          <ActionButton 
+            title="AI Chat" 
+            variant="secondary"
+            icon={<Feather name="message-square" size={20} color={Colors.text} />} 
+            onPress={() => {}} 
+            style={styles.actionBtn}
+          />
+        </View>
+
+        {/* Insights Section */}
+        <SectionHeader title="AI Intelligence" actionTitle="See All" onAction={() => router.push('/ai')} />
+        <View style={styles.insightsContainer}>
+          {aiAnalysis ? (
+            aiAnalysis.recommendations.slice(0, 3).map((rec) => (
+              <RecommendationCard key={rec.id} recommendation={rec} />
+            ))
+          ) : (
+            <View style={{ padding: 20, alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Layout.borderRadius }}>
+              <Feather name="zap-off" size={24} color={Colors.textMuted} style={{ marginBottom: 12 }} />
+              <Text style={{ color: Colors.textMuted, textAlign: 'center' }}>No AI insights generated yet. Go to the AI tab to analyze your files.</Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
-  stepContainer: {
-    gap: 8,
+  scrollContent: {
+    paddingTop: Layout.padding,
+  },
+  header: {
+    paddingHorizontal: Layout.padding,
+    marginBottom: Layout.spacing * 1.5,
+  },
+  greeting: {
+    ...Typography.body,
+    color: Colors.textMuted,
+    marginBottom: 4,
+  },
+  title: {
+    ...Typography.h1,
+    fontSize: 40,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    ...Typography.body,
+    color: Colors.textMuted,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingHorizontal: Layout.padding,
+    marginBottom: Layout.spacing * 1.5,
+  },
+  actionBtn: {
+    width: '48%',
+  },
+  insightsContainer: {
+    paddingHorizontal: Layout.padding,
   },
 });

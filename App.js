@@ -1,19 +1,3 @@
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-gesture-handler';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { FilesProvider } from './context/FilesContext';
-import AppNavigator from './navigation/AppNavigator';
-
-export default function App() {
-    return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>
-                <StatusBar style="light" />
-                <FilesProvider>
-                    <AppNavigator />
-                </FilesProvider>
-            </SafeAreaProvider>
-        </GestureHandlerRootView>
-    );
-}
+// This file is no longer the app entry point.
+// Entry point is now managed by expo-router (see "main": "expo-router/entry" in package.json).
+// Providers are registered in app/_layout.tsx.
